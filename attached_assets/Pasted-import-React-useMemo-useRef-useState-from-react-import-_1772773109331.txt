@@ -1,0 +1,352 @@
+import React, { useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+
+export default function DevCommunityActivityTestApp() {
+
+  const [participantName, setParticipantName] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
+  const [domain, setDomain] = useState("");
+
+  const resultCardRef = useRef(null);
+
+  // 참가자 기록
+  const [participants, setParticipants] = useState([]);
+
+  const questions = [
+    {
+      id: 1,
+      text: "커뮤니티 행사에 왔을 때 가장 기대되는 순간은?",
+      options: [
+        { label: "사람들과 자유롭게 이야기할 때", type: "exchange" },
+        { label: "다양한 사람을 만날 때", type: "network" },
+        { label: "기술 이야기를 깊게 나눌 때", type: "growth" },
+        { label: "함께 무언가 만들어볼 때", type: "challenge" },
+        { label: "발표나 세션을 들을 때", type: "expand" },
+        { label: "배운 것을 기록할 때", type: "record" },
+      ],
+    },
+    {
+      id: 2,
+      text: "개발자로서 가장 재미있는 순간은?",
+      options: [
+        { label: "대화 속에서 아이디어가 나올 때", type: "exchange" },
+        { label: "새로운 사람을 알게 될 때", type: "network" },
+        { label: "기술을 깊게 이해했을 때", type: "growth" },
+        { label: "프로젝트를 완성했을 때", type: "challenge" },
+        { label: "좋은 발표를 들었을 때", type: "expand" },
+        { label: "경험을 글로 정리했을 때", type: "record" },
+      ],
+    },
+    {
+      id: 3,
+      text: "행사에서 나는 보통",
+      options: [
+        { label: "주변 사람들과 자연스럽게 이야기한다", type: "exchange" },
+        { label: "다양한 사람과 인사를 나눈다", type: "network" },
+        { label: "기술 토론을 한다", type: "growth" },
+        { label: "같이 만들 사람을 찾는다", type: "challenge" },
+        { label: "발표나 프로그램을 집중해서 듣는다", type: "expand" },
+        { label: "내용을 기록한다", type: "record" },
+      ],
+    },
+    {
+      id: 4,
+      text: "올해 가장 해보고 싶은 커뮤니티 활동은?",
+      options: [
+        { label: "편하게 이야기하는 모임", type: "exchange" },
+        { label: "다양한 개발자를 만나는 행사", type: "network" },
+        { label: "스터디", type: "growth" },
+        { label: "해커톤", type: "challenge" },
+        { label: "컨퍼런스", type: "expand" },
+        { label: "콘텐츠 공유", type: "record" },
+      ],
+    },
+    {
+      id: 5,
+      text: "내가 가장 편한 커뮤니티 분위기는?",
+      options: [
+        { label: "작은 그룹", type: "exchange" },
+        { label: "다양한 사람", type: "network" },
+        { label: "깊은 기술 대화", type: "growth" },
+        { label: "함께 만드는 분위기", type: "challenge" },
+        { label: "발표 중심 행사", type: "expand" },
+        { label: "기록과 공유", type: "record" },
+      ],
+    },
+    {
+      id: 6,
+      text: "커뮤니티에서 내가 얻고 싶은 것은?",
+      options: [
+        { label: "편안한 대화", type: "exchange" },
+        { label: "새로운 연결", type: "network" },
+        { label: "기술 성장", type: "growth" },
+        { label: "실전 경험", type: "challenge" },
+        { label: "인사이트", type: "expand" },
+        { label: "기록과 정리", type: "record" },
+      ],
+    },
+  ];
+
+  const resultMeta = {
+    record: { emoji: "🔴", name: "기록형", description: "경험을 정리하고 공유하는 것을 즐기는 타입", program: "모닥레터" },
+    exchange: { emoji: "🟠", name: "교류형", description: "사람과 대화를 통해 아이디어를 얻는 타입", program: "모닥라운지" },
+    network: { emoji: "🟡", name: "네트워킹형", description: "새로운 연결을 통해 에너지를 얻는 타입", program: "모닥데이" },
+    growth: { emoji: "🔵", name: "성장형", description: "깊이 배우고 꾸준히 성장하는 타입", program: "모닥랩" },
+    challenge: { emoji: "🔷", name: "도전형", description: "직접 만들고 실험하는 것을 좋아하는 타입", program: "모닥톤" },
+    expand: { emoji: "🟣", name: "확장형", description: "경험을 나누고 영향력을 넓히는 타입", program: "모닥페스타" },
+  };
+
+  const [step, setStep] = useState("intro");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState([]);
+
+  const total = questions.length;
+  const currentQuestion = questions[currentIndex];
+  const currentAnswer = answers[currentIndex] ?? null;
+
+  const handleSelect = (type) => {
+    const next = [...answers];
+    next[currentIndex] = type;
+    setAnswers(next);
+  };
+
+  const resultType = useMemo(() => {
+    const counts = { record:0, exchange:0, network:0, growth:0, challenge:0, expand:0 };
+    answers.forEach((type) => { if(type) counts[type] += 1 });
+    return Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+  }, [answers]);
+
+  const result = resultMeta[resultType];
+
+  const goNext = () => {
+    if (!currentAnswer) return;
+
+    if (currentIndex === total - 1) {
+
+      const newParticipant = {
+        name: participantName,
+        years: experienceYears,
+        domain,
+        type: resultType
+      };
+
+      setParticipants([...participants, newParticipant]);
+      setStep("result");
+      return;
+    }
+
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const sameTypePeople = participants
+    .filter(p => p.type === resultType)
+    .map(p => p.name);
+
+  const distribution = useMemo(() => {
+    const counts = { record:0, exchange:0, network:0, growth:0, challenge:0, expand:0 };
+    participants.forEach(p => counts[p.type]++);
+    return counts;
+  }, [participants]);
+
+  const maxCount = Math.max(...Object.values(distribution),1);
+
+  const handleSaveCard = async () => {
+    const canvas = await html2canvas(resultCardRef.current);
+    const link = document.createElement("a");
+    link.download = "my-dev-type.png";
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex justify-center">
+      <div className="w-full max-w-md p-6">
+
+        {step === "intro" && (
+          <div className="space-y-6">
+
+            <div className="text-center">
+              <img src="/campfire.png" alt="campfire" className="w-28 mx-auto" />
+
+              <h1 className="text-2xl font-bold mt-6">
+                올해의 나와 맞는
+                커뮤니티 활동 찾기
+              </h1>
+
+              <p className="text-slate-400 mt-3 text-sm">
+                몇 가지 질문을 통해
+                당신에게 맞는 활동을 찾아보세요
+              </p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl space-y-4">
+
+              <div>
+                <label className="text-sm text-slate-400">이름</label>
+                <input
+                  value={participantName}
+                  onChange={(e) => setParticipantName(e.target.value)}
+                  placeholder="이름을 입력하세요"
+                  className="w-full mt-2 p-3 rounded-lg bg-slate-800 border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400">개발 경력</label>
+                <input
+                  type="number"
+                  value={experienceYears}
+                  onChange={(e) => setExperienceYears(e.target.value)}
+                  placeholder="숫자 입력"
+                  className="w-full mt-2 p-3 rounded-lg bg-slate-800 border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400">현재 도메인</label>
+                <select
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  className="w-full mt-2 p-3 rounded-lg bg-slate-800 border border-slate-700"
+                >
+                  <option value="">도메인을 선택하세요</option>
+                  <option value="게임 클라이언트">게임 클라이언트</option>
+                  <option value="게임 서버">게임 서버</option>
+                  <option value="백엔드">백엔드</option>
+                  <option value="프론트엔드">프론트엔드</option>
+                  <option value="AI/ML">AI / ML</option>
+                  <option value="데이터">데이터</option>
+                  <option value="DevOps">DevOps</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+            </div>
+
+            <button
+              disabled={!participantName || !experienceYears || !domain}
+              onClick={() => setStep("question")}
+              className={`w-full py-4 rounded-xl font-semibold ${participantName && experienceYears && domain ? "bg-orange-500" : "bg-slate-700"}`}
+            >
+              테스트 시작
+            </button>
+
+          </div>
+        )}
+
+        {step === "question" && currentQuestion && (
+          <div className="space-y-6">
+
+            <h2 className="text-xl font-semibold">
+              Q{currentQuestion.id}. {currentQuestion.text}
+            </h2>
+
+            <div className="space-y-3">
+              {currentQuestion.options.map((option, idx) => {
+                const selected = currentAnswer === option.type;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelect(option.type)}
+                    className={`w-full p-3 rounded-lg text-left transition ${selected ? "bg-white text-black" : "bg-slate-800 hover:bg-slate-700"}`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={goNext}
+              disabled={!currentAnswer}
+              className="w-full py-4 bg-orange-500 rounded-xl font-semibold"
+            >
+              {currentIndex === total - 1 ? "결과 보기" : "다음"}
+            </button>
+
+          </div>
+        )}
+
+        {step === "result" && result && (
+          <div className="space-y-6 text-center">
+
+            {/* 캡처용 카드 */}
+            <div ref={resultCardRef} className="bg-slate-900 p-6 rounded-xl">
+
+              <img src="/campfire.png" alt="campfire" className="w-20 mx-auto mb-3" />
+
+              <h2 className="text-xl font-semibold">
+                {participantName}
+              </h2>
+
+              <p className="text-slate-400 text-sm">
+                {experienceYears}년차 · {domain}
+              </p>
+
+              <div className="text-4xl mt-4">{result.emoji}</div>
+
+              <h3 className="text-2xl font-bold">{result.name}</h3>
+
+              <p className="text-slate-300 text-sm">
+                {result.description}
+              </p>
+
+              <div className="mt-3 text-orange-400 font-semibold">
+                추천 프로그램 : {result.program}
+              </div>
+
+            </div>
+
+            <button
+              onClick={handleSaveCard}
+              className="w-full py-3 bg-orange-500 rounded-xl font-semibold"
+            >
+              결과 카드 저장
+            </button>
+
+            <div className="bg-slate-900 p-4 rounded-xl text-left">
+              <div className="font-semibold mb-2">👥 나와 같은 유형</div>
+              <div className="text-sm text-slate-300">
+                {sameTypePeople.length > 0
+                  ? `${sameTypePeople.join(", ")} 님이 같은 유형이에요.`
+                  : "아직 같은 유형이 없습니다."}
+              </div>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl">
+              <div className="font-semibold mb-4">📊 전체 유형 분포</div>
+
+              <div className="flex items-end justify-between h-40 gap-3">
+              {Object.entries(distribution).map(([key,value]) => (
+                <div key={key} className="flex flex-col items-center flex-1">
+
+                  <div
+                    className="bg-orange-500 w-full rounded-t"
+                    style={{height:`${(value/maxCount)*100}%`}}
+                  />
+
+                  <div className="text-xs mt-2 text-center">
+                    {resultMeta[key].emoji}
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 text-center">
+                    {resultMeta[key].name}
+                  </div>
+
+                  <div className="text-xs mt-1">
+                    {value}
+                  </div>
+
+                </div>
+              ))}
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
